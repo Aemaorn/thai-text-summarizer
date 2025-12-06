@@ -1,0 +1,15 @@
+venv/
+venv/
+__pycache__/
+*.pkl
+*.onnx
+*.h5
+*.zip
+*.tar.gz
+venv/
+__pycache__/
+*.pkl
+*.onnx
+*.h5
+*.zip
+*.tar.gz
