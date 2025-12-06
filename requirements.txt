@@ -8,3 +8,4 @@ sentencepiece
 nltk
 tqdm
 pyperclip
+rouge-score
