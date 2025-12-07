@@ -27,7 +27,7 @@ st.session_state.theme = theme
 
 menu = st.sidebar.radio(
     "เมนู",
-    ["สรุปข้อความ", "ดูประวัติ", "ประเมินโมเดล", "ข้อมูลโมเดล 🧠"]
+    ["สรุปข้อความ", "ดูประวัติ", "ประเมินโมเดล"]
 )
 
 # ------------------------------------------------------------
@@ -35,42 +35,70 @@ menu = st.sidebar.radio(
 # ------------------------------------------------------------
 def set_theme(theme):
     if theme == "🌙 Dark":
-        bg = "#2C2C2C"
+        bg = "#1A1A1A"
         text_color = "#FFFFFF"
-        card_bg = "rgba(50,50,50,0.9)"
-        sidebar_bg = "#1B1B1B"
+        card_bg = "rgba(30,30,30,0.95)"
+        sidebar_bg = "#000000"
         sidebar_text = "#FFFFFF"
+        input_bg = "#333333"
     else:
         bg = "#D8C3A5"
         text_color = "#0d47a1"
-        card_bg = "rgba(255,255,255,0.9)"
+        card_bg = "rgba(255,255,255,0.95)"
         sidebar_bg = "#8B6D5C"
         sidebar_text = "#000000"
+        input_bg = "#FFFFFF"
 
     st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg}; color: {text_color}; }}
 
-    /* การ์ด UI */
+    .stApp {{
+        background-color: {bg};
+        color: {text_color};
+    }}
+
+    /* ปรับทุกตัวหนังสือ */
+    * {{
+        color: {text_color} !important;
+    }}
+
+    /* การ์ด */
     .card {{
         background-color: {card_bg};
-        padding: 20px; border-radius: 12px;
-        margin: 15px 0; color: {text_color};
+        padding: 20px;
+        border-radius: 12px;
+        margin: 15px 0;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }}
 
     /* Sidebar */
     section[data-testid="stSidebar"] {{
         background-color: {sidebar_bg};
-        color: {sidebar_text};
-    }}
-    section[data-testid="stSidebar"] * {{
-        color: {sidebar_text};
     }}
 
-    /* Label ของ text_area, text_input */
-    label, .stTextArea label, .stTextInput label {{
+    section[data-testid="stSidebar"] * {{
+        color: {sidebar_text} !important;
+    }}
+
+    /* text_area, input ให้เป็นพื้นเข้มใน Dark */
+    textarea, input, .stTextInput input {{
+        background-color: {input_bg} !important;
         color: {text_color} !important;
+        border-radius: 6px;
+        padding: 8px;
+    }}
+
+    /* ปุ่ม */
+    .stButton>button {{
+        background-color: #444 !important;
+        color: #fff !important;
+        border-radius: 8px;
+        font-weight: bold;
+        transition: 0.2s;
+    }}
+    .stButton>button:hover {{
+        background-color: #777 !important;
+        color: white !important;
     }}
 
     </style>
@@ -82,20 +110,19 @@ set_theme(st.session_state.theme)
 # MAIN TITLE
 # ------------------------------------------------------------
 st.title("🧠 Thai Text Summarization System")
-st.subheader("✨ ระบบสรุปใจความสำคัญภาษาไทยอัตโนมัติ ✨")
+st.subheader("✨ ระบบสรุปข้อความภาษาไทยอัตโนมัติ ✨")
 
 # ------------------------------------------------------------
-# 1) SUMMARIZATION PAGE
+# 1) สรุปข้อความ
 # ------------------------------------------------------------
 if menu == "สรุปข้อความ":
-    st.markdown("### 📝 ป้อนข้อความที่ต้องการให้ระบบสรุป")
+    st.markdown("### 📝 ป้อนข้อความที่ต้องการสรุป")
 
     if "temp_text" not in st.session_state:
         st.session_state.temp_text = ""
 
     text_input = st.text_area("ข้อความ:", height=200, value=st.session_state.temp_text)
 
-    # ปุ่มล้างข้อความ
     if st.button("🧹 ล้างข้อความ"):
         st.session_state.temp_text = ""
         st.rerun()
@@ -104,30 +131,31 @@ if menu == "สรุปข้อความ":
         if text_input.strip():
             st.session_state.temp_text = text_input
 
-            with st.spinner("⏳ กำลังสรุปข้อความ..."):
+            with st.spinner("⏳ กำลังสรุป..."):
                 summary = summarize_text(text_input)
                 save_summary(text_input, summary)
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.success("✅ สรุปสำเร็จ!")
+            st.success("✨ สรุปสำเร็จ!")
+
             st.markdown("### 📄 ผลลัพธ์:")
             st.write(summary)
 
-            if st.button("📋 คัดลอกข้อความสรุป"):
+            if st.button("📋 คัดลอกผลสรุป"):
                 pyperclip.copy(summary)
-                st.toast("คัดลอกแล้ว ✔", icon="📋")
+                st.toast("คัดลอกแล้ว ✔")
 
             st.markdown("</div>", unsafe_allow_html=True)
 
         else:
             st.warning("⚠️ กรุณาป้อนข้อความก่อน")
 
-
 # ------------------------------------------------------------
-# 2) HISTORY PAGE
+# 2) ดูประวัติ
 # ------------------------------------------------------------
 elif menu == "ดูประวัติ":
-    st.subheader("📜 ประวัติการสรุปข้อความทั้งหมด")
+
+    st.subheader("📜 ประวัติการสรุปข้อความ")
 
     data = get_all_summaries()
 
@@ -143,14 +171,13 @@ elif menu == "ดูประวัติ":
 
             if f"ori_expand_{i}" not in st.session_state:
                 st.session_state[f"ori_expand_{i}"] = False
-
             if f"sum_expand_{i}" not in st.session_state:
                 st.session_state[f"sum_expand_{i}"] = False
 
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.markdown(f"### 🕒 วันที่: {created_at}")
 
-            # ORIGINAL
+            # -------- ORIGINAL TEXT ----------
             st.markdown("#### 📝 ข้อความต้นฉบับ:")
             if len(ori_lines) > 5:
                 if st.session_state[f"ori_expand_{i}"]:
@@ -167,8 +194,8 @@ elif menu == "ดูประวัติ":
             else:
                 st.write(original)
 
-            # SUMMARY
-            st.markdown("#### 📄 ข้อความสรุป:")
+            # -------- SUMMARY TEXT ----------
+            st.markdown("#### 📄 ผลสรุป:")
             if len(sum_lines) > 5:
                 if st.session_state[f"sum_expand_{i}"]:
                     st.write(summary)
@@ -184,27 +211,28 @@ elif menu == "ดูประวัติ":
             else:
                 st.write(summary)
 
+            # -------- ACTION BUTTONS ----------
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("📋 คัดลอกสรุป", key=f"copy_{i}"):
+                if st.button("📋 คัดลอก", key=f"copy_{i}"):
                     pyperclip.copy(summary)
                     st.toast("คัดลอกแล้ว ✔")
 
             with col2:
-                if st.button("🗑 ลบบันทึกนี้", key=f"delete_{i}"):
+                if st.button("🗑 ลบ", key=f"delete_{i}"):
                     delete_summary(record_id)
-                    st.success("ลบเรียบร้อย")
+                    st.success("ลบแล้ว")
                     st.rerun()
 
             st.markdown("</div><br>", unsafe_allow_html=True)
 
-
 # ------------------------------------------------------------
-# 3) EVALUATION PAGE
+# 3) ประเมินโมเดล
 # ------------------------------------------------------------
 elif menu == "ประเมินโมเดล":
-    st.subheader("📈 การประเมินโมเดล")
+    st.subheader("📈 ประเมินคุณภาพโมเดล")
+
     ref = st.text_area("สรุปจริง (Reference)")
     cand = st.text_area("ผลลัพธ์โมเดล (Candidate)")
 
@@ -214,11 +242,3 @@ elif menu == "ประเมินโมเดล":
             st.write(scores)
         else:
             st.warning("⚠️ กรุณากรอกให้ครบ")
-
-
-# ------------------------------------------------------------
-# 4) MODEL INFO
-# ------------------------------------------------------------
-elif menu == "ข้อมูลโมเดล 🧠":
-    st.markdown("## 🧠 รายละเอียดโมเดล")
-    st.write("โมเดล mT5 สำหรับสรุปข้อความภาษาไทย…")
