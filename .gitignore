@@ -1,15 +1,17 @@
+# Virtual environment
 venv/
-venv/
+VENV/
+.venv/
+
+# Cache
 __pycache__/
+
+# Model & data files
 *.pkl
 *.onnx
 *.h5
 *.zip
 *.tar.gz
-venv/
-__pycache__/
-*.pkl
-*.onnx
-*.h5
-*.zip
-*.tar.gz
+
+# SQLite DB (หากไม่ต้องการ push ขึ้น GitHub)
+*.db

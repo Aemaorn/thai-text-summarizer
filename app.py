@@ -1,21 +1,26 @@
 import streamlit as st
 import pyperclip
 from summarizer import summarize_text
-from database import init_db, save_summary, get_all_summaries
+from database import init_db, save_summary, get_all_summaries, delete_summary
 from evaluation import evaluate_summary
 
-# ---------- Page Config ----------
+# ------------------------------------------------------------
+# PAGE CONFIG
+# ------------------------------------------------------------
 st.set_page_config(page_title="Thai Summarizer", page_icon="🧠", layout="wide")
 init_db()
 
-# ---------- Session State สำหรับ Theme ----------
+# ------------------------------------------------------------
+# THEME SESSION
+# ------------------------------------------------------------
 if "theme" not in st.session_state:
     st.session_state.theme = "🌞 Light"
 
-# ---------- Sidebar ----------
+# ------------------------------------------------------------
+# SIDEBAR
+# ------------------------------------------------------------
 theme = st.sidebar.radio(
-    "ธีม", 
-    ["🌞 Light", "🌙 Dark"], 
+    "ธีม", ["🌞 Light", "🌙 Dark"],
     index=0 if st.session_state.theme == "🌞 Light" else 1
 )
 st.session_state.theme = theme
@@ -25,39 +30,35 @@ menu = st.sidebar.radio(
     ["สรุปข้อความ", "ดูประวัติ", "ประเมินโมเดล", "ข้อมูลโมเดล 🧠"]
 )
 
-# ---------- CSS Theme Function ----------
+# ------------------------------------------------------------
+# THEME CSS
+# ------------------------------------------------------------
 def set_theme(theme):
     if theme == "🌙 Dark":
         bg = "#2C2C2C"
         text_color = "#FFFFFF"
         card_bg = "rgba(50,50,50,0.9)"
-        button_bg = "#555555"
-        button_hover = "#888888"
         sidebar_bg = "#1B1B1B"
         sidebar_text = "#FFFFFF"
-        topbar_bg = "#1B1B1B"   # Dark Topbar
     else:
         bg = "#D8C3A5"
         text_color = "#0d47a1"
         card_bg = "rgba(255,255,255,0.9)"
-        button_bg = "#42a5f5"
-        button_hover = "#1565c0"
-        sidebar_bg = "#8B6D5C"      # Sidebar brown
+        sidebar_bg = "#8B6D5C"
         sidebar_text = "#000000"
-        topbar_bg = "#D98C6D"       # Terracotta Light
 
     st.markdown(f"""
     <style>
-    /* Main App */
-    .stApp {{
-        background-color: {bg};
-        color: {text_color};
+    .stApp {{ background-color: {bg}; color: {text_color}; }}
+
+    /* การ์ด UI */
+    .card {{
+        background-color: {card_bg};
+        padding: 20px; border-radius: 12px;
+        margin: 15px 0; color: {text_color};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }}
-    /* Top bar */
-    header {{
-        background-color: {topbar_bg} !important;
-        color: white !important;
-    }}
+
     /* Sidebar */
     section[data-testid="stSidebar"] {{
         background-color: {sidebar_bg};
@@ -66,114 +67,158 @@ def set_theme(theme):
     section[data-testid="stSidebar"] * {{
         color: {sidebar_text};
     }}
-    /* Card */
-    .card {{
-        background-color: {card_bg};
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        margin: 15px 0;
-        color: {text_color};
+
+    /* Label ของ text_area, text_input */
+    label, .stTextArea label, .stTextInput label {{
+        color: {text_color} !important;
     }}
-    /* Button */
-    .stButton>button {{
-        border-radius: 10px;
-        background-color: {button_bg};
-        color: white;
-        font-weight: bold;
-        transition: 0.3s;
-    }}
-    .stButton>button:hover {{
-        background-color: {button_hover};
-    }}
+
     </style>
     """, unsafe_allow_html=True)
 
-# เรียกใช้ Theme
 set_theme(st.session_state.theme)
 
-# ---------- หน้าเว็บ ----------
+# ------------------------------------------------------------
+# MAIN TITLE
+# ------------------------------------------------------------
 st.title("🧠 Thai Text Summarization System")
 st.subheader("✨ ระบบสรุปใจความสำคัญภาษาไทยอัตโนมัติ ✨")
 
-# ---------- เมนูหลัก ----------
+# ------------------------------------------------------------
+# 1) SUMMARIZATION PAGE
+# ------------------------------------------------------------
 if menu == "สรุปข้อความ":
     st.markdown("### 📝 ป้อนข้อความที่ต้องการให้ระบบสรุป")
-    text_input = st.text_area("ข้อความ:", height=200)
+
+    if "temp_text" not in st.session_state:
+        st.session_state.temp_text = ""
+
+    text_input = st.text_area("ข้อความ:", height=200, value=st.session_state.temp_text)
+
+    # ปุ่มล้างข้อความ
+    if st.button("🧹 ล้างข้อความ"):
+        st.session_state.temp_text = ""
+        st.rerun()
 
     if st.button("🚀 สรุปข้อความ"):
         if text_input.strip():
+            st.session_state.temp_text = text_input
+
             with st.spinner("⏳ กำลังสรุปข้อความ..."):
                 summary = summarize_text(text_input)
                 save_summary(text_input, summary)
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.success("✅ สรุปสำเร็จ!")
-                st.markdown("### 📄 ผลลัพธ์:")
-                st.write(summary)
-                if st.button("📋 คัดลอกข้อความสรุป"):
-                    pyperclip.copy(summary)
-                    st.toast("✅ คัดลอกแล้ว!", icon="📋")
-                st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.success("✅ สรุปสำเร็จ!")
+            st.markdown("### 📄 ผลลัพธ์:")
+            st.write(summary)
+
+            if st.button("📋 คัดลอกข้อความสรุป"):
+                pyperclip.copy(summary)
+                st.toast("คัดลอกแล้ว ✔", icon="📋")
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
         else:
             st.warning("⚠️ กรุณาป้อนข้อความก่อน")
 
-elif menu == "ดูประวัติ":
-    st.subheader("📜 ประวัติการสรุปข้อความที่ผ่านมา")
-    data = get_all_summaries()
-    if not data:
-        st.info("ยังไม่มีข้อมูลในฐานข้อมูล")
-    else:
-        for row in data:
-            st.markdown(f"""
-            <div class='card'>
-                <b>🕒 วันที่:</b> {row[3]}<br>
-                <b>📝 ข้อความต้นฉบับ:</b> {row[1][:200]}...<br>
-                <b>📄 สรุป:</b> {row[2]}
-            </div>
-            """, unsafe_allow_html=True)
 
+# ------------------------------------------------------------
+# 2) HISTORY PAGE
+# ------------------------------------------------------------
+elif menu == "ดูประวัติ":
+    st.subheader("📜 ประวัติการสรุปข้อความทั้งหมด")
+
+    data = get_all_summaries()
+
+    if not data:
+        st.info("ยังไม่มีข้อมูล")
+    else:
+        data = data[::-1]
+
+        for i, (record_id, original, summary, created_at) in enumerate(data):
+
+            ori_lines = original.split("\n")
+            sum_lines = summary.split("\n")
+
+            if f"ori_expand_{i}" not in st.session_state:
+                st.session_state[f"ori_expand_{i}"] = False
+
+            if f"sum_expand_{i}" not in st.session_state:
+                st.session_state[f"sum_expand_{i}"] = False
+
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.markdown(f"### 🕒 วันที่: {created_at}")
+
+            # ORIGINAL
+            st.markdown("#### 📝 ข้อความต้นฉบับ:")
+            if len(ori_lines) > 5:
+                if st.session_state[f"ori_expand_{i}"]:
+                    st.write(original)
+                else:
+                    st.write("\n".join(ori_lines[:5]) + " ...")
+
+                if st.session_state[f"ori_expand_{i}"]:
+                    if st.button("🔼 ซ่อน", key=f"hide_ori_{i}"):
+                        st.session_state[f"ori_expand_{i}"] = False
+                else:
+                    if st.button("🔽 ดูเพิ่มเติม", key=f"show_ori_{i}"):
+                        st.session_state[f"ori_expand_{i}"] = True
+            else:
+                st.write(original)
+
+            # SUMMARY
+            st.markdown("#### 📄 ข้อความสรุป:")
+            if len(sum_lines) > 5:
+                if st.session_state[f"sum_expand_{i}"]:
+                    st.write(summary)
+                else:
+                    st.write("\n".join(sum_lines[:5]) + " ...")
+
+                if st.session_state[f"sum_expand_{i}"]:
+                    if st.button("🔼 ซ่อนสรุป", key=f"hide_sum_{i}"):
+                        st.session_state[f"sum_expand_{i}"] = False
+                else:
+                    if st.button("🔽 ดูเพิ่มเติมสรุป", key=f"show_sum_{i}"):
+                        st.session_state[f"sum_expand_{i}"] = True
+            else:
+                st.write(summary)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("📋 คัดลอกสรุป", key=f"copy_{i}"):
+                    pyperclip.copy(summary)
+                    st.toast("คัดลอกแล้ว ✔")
+
+            with col2:
+                if st.button("🗑 ลบบันทึกนี้", key=f"delete_{i}"):
+                    delete_summary(record_id)
+                    st.success("ลบเรียบร้อย")
+                    st.rerun()
+
+            st.markdown("</div><br>", unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------
+# 3) EVALUATION PAGE
+# ------------------------------------------------------------
 elif menu == "ประเมินโมเดล":
-    st.subheader("📈 การประเมินผลโมเดล (ROUGE / BLEU)")
-    reference = st.text_area("สรุปจริง (Reference):", height=100)
-    candidate = st.text_area("สรุปจากโมเดล (Candidate):", height=100)
+    st.subheader("📈 การประเมินโมเดล")
+    ref = st.text_area("สรุปจริง (Reference)")
+    cand = st.text_area("ผลลัพธ์โมเดล (Candidate)")
 
     if st.button("📊 ประเมิน"):
-        if reference.strip() and candidate.strip():
-            scores = evaluate_summary(reference, candidate)
-            st.success("ผลการประเมิน:")
-            st.write(f"🔹 ROUGE-1: {scores['ROUGE-1']}")
-            st.write(f"🔹 ROUGE-L: {scores['ROUGE-L']}")
-            st.write(f"🔹 BLEU: {scores['BLEU']}")
+        if ref.strip() and cand.strip():
+            scores = evaluate_summary(ref, cand)
+            st.write(scores)
         else:
-            st.warning("⚠️ ป้อนข้อความทั้งสองช่องก่อนประเมิน")
+            st.warning("⚠️ กรุณากรอกให้ครบ")
 
+
+# ------------------------------------------------------------
+# 4) MODEL INFO
+# ------------------------------------------------------------
 elif menu == "ข้อมูลโมเดล 🧠":
-    st.subheader("🧠 Model Information: mT5-base-thaisum-text-summarization")
-    st.markdown("""
-    <div class='card'>
-        <h3>📘 ข้อมูลทั่วไป</h3>
-        <ul>
-            <li><b>Model Name:</b> StelleX/mt5-base-thaisum-text-summarization</li>
-            <li><b>Framework:</b> PyTorch + Hugging Face Transformers</li>
-            <li><b>Language:</b> Thai</li>
-            <li><b>Architecture:</b> Encoder–Decoder (Text-to-Text)</li>
-            <li><b>Task Type:</b> Text Summarization</li>
-            <li><b>Base Model:</b> Google mT5 (Multilingual T5)</li>
-            <li><b>Parameters:</b> ≈ 580 million</li>
-        </ul>
-    </div>
-    <div class='card'>
-        <h3>🧩 จุดเด่นของโมเดล</h3>
-        <ul>
-            <li>รองรับหลายภาษา (Multilingual) รวมถึงภาษาไทย</li>
-            <li>สามารถเข้าใจและสรุปเนื้อหายาวได้</li>
-            <li>เหมาะกับงานสรุปข่าว บทความ หรือรายงานภาษาไทย</li>
-            <li>สามารถต่อยอดไปยังงานแปลภาษา หรือถาม–ตอบได้</li>
-        </ul>
-    </div>
-    <div class='card'>
-        <h3>🔬 อ้างอิง</h3>
-        <p>โมเดลนี้ถูกพัฒนาโดย <a href='https://huggingface.co/StelleX' target='_blank'>StelleX</a> 
-        และเผยแพร่บน Hugging Face Hub</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("## 🧠 รายละเอียดโมเดล")
+    st.write("โมเดล mT5 สำหรับสรุปข้อความภาษาไทย…")
